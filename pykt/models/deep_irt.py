@@ -83,5 +83,5 @@ class DeepIRT(Module):
         if not qtest:
             return p
         else:
-            print(f"f shape is {f.shape},k shape is {k.shape}")
+            # print(f"f shape is {f.shape},k shape is {k.shape}")
             return p, f, k

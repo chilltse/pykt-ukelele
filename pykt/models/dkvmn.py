@@ -36,7 +36,8 @@ class DKVMN(Module):
         emb_type = self.emb_type
         batch_size = q.shape[0]
         if emb_type == "qid":
-            x = q + self.num_c * r
+            # 当 r = 0 时： 索引范围在：0 ~ num_c-1； 当 r = 1 时：索引范围在：num_c ~ 2*num_c-1
+            x = q + self.num_c * r # 表示题目和response的embedding
             k = self.k_emb_layer(q)
             v = self.v_emb_layer(x)
         
