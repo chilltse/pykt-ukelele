@@ -2,6 +2,8 @@ import json
 import pandas as pd
 from .utils import sta_infos, write_txt
 
+# KC: prev_pitches | pitches | strings（同一条 exercise 内首帧 prev_pitches 为 inf）
+
 KEYS = ["user_id", "sequence_id"]
 
 # =============================================================================
@@ -9,41 +11,22 @@ KEYS = ["user_id", "sequence_id"]
 # -----------------------------------------------------------------------------
 # 1) 只保留 play_mode == "play" 的样本
 # 2) 按 user_id 分组，同一用户内按 days_since_signup / session / part 排序后拼接
-# 3) question_id = prev_duration|pitches|strings；prev_duration 按 exercise 判断：该 exercise 的起始音为 "inf"，否则为上一个音的 duration（不跨 exercise 拼接后再算）
-# 4) KC 通过 question_id_to_kc(question_id) 得到，默认实现为抽取 pitches 部分
+# 3) question_id = prev_duration|pitches|strings；prev_duration 按 exercise：起始音为 "inf"，否则为上一音 duration
+# 4) KC（sequence_id）= prev_pitches|pitches|strings；首帧 prev_pitches 为 "inf"，否则为上一音的 pitches
 # 5) response = reject_reason：0→1，非0→0
-
-
-# 将一个用户的数据按 write_txt 预期结构组织：
-# [
-#   [user_id, seq_len],   # 元信息（一般写在第一行/第一段）
-#   problems,             # question_id 序列
-#   skills,               # KC 序列
-#   answers,              # 答对序列
-#   start_time,           # 开始时间序列（这里 NA）
-#   response_cost         # 耗时序列（这里 NA）
-# ]
 # =============================================================================
 
-def question_id_to_kc(question_id: str) -> str:
-    """从 question_id 中抽取 pitches 部分作为 KC。question_id 格式: prev_duration|pitches|strings"""
-    parts = question_id.split("|", 2)
-    if len(parts) < 2:
-        return question_id
-    return parts[1]
 
 def sanitize_field(x, sep="^"):
-    """
-    将字段转成字符串，并把逗号替换为 sep，避免和 write_txt 的逗号分隔冲突。
-    """
+    """将字段转成字符串，并把逗号替换为 sep，避免和 write_txt 的逗号分隔冲突。"""
     s = str(x)
     s = s.replace(",", sep)
-    s = s.replace("\n", "").replace("\r", "").replace("\t", "").replace(' ', '')
+    s = s.replace("\n", "").replace("\r", "").replace("\t", "").replace(" ", "")
     return s
 
+
 def _events_to_event_rows(events_data_str):
-    """从 events_data 字符串解析出事件列表：每项 (question_id, kc, response)。
-    prev_duration 按“每个 exercise(record)”内计算：起始音为 "inf"，否则为上一音的 duration。"""
+    """从 events_data 解析 (question_id, kc, response)。prev 均在每个 exercise(record) 内计算。"""
     data = json.loads(events_data_str)
     inner = data.get("data", data)
 
@@ -56,19 +39,18 @@ def _events_to_event_rows(events_data_str):
 
     out = []
     for i in range(n):
-        # ✅ 每条 record（即一个 exercise/part）内起始音 -> inf
         prev_dur = "inf" if i == 0 else str(int(duration[i - 1]))
-        # 替换 pitches，strings 里的逗号
         pitch_s = sanitize_field(str(pitches[i]), sep="^")
         string_s = sanitize_field(str(strings[i]), sep="^")
 
         qid = f"{prev_dur}|{pitch_s}|{string_s}"
 
-        kc = question_id_to_kc(qid)
+        prev_ps = "inf" if i == 0 else sanitize_field(str(pitches[i - 1]), sep="^")
+        kc = f"{prev_ps}|{pitch_s}|{string_s}"
+
         resp = 1 if reject_reason[i] == 0 else 0
         out.append((qid, kc, resp))
     return out
-
 
 
 def read_data_from_json(read_file, write_file):
@@ -77,12 +59,10 @@ def read_data_from_json(read_file, write_file):
     with open(read_file, "r", encoding="utf-8") as f:
         raw_list = json.load(f)
 
-    # 1) 只保留 play_mode == "play"
     records = [r for r in raw_list if r.get("play_mode") == "play"]
     if not records:
         raise ValueError("No records with play_mode=='play'")
 
-    # 展平成每行一个事件：(user_id, days, part, sess, question_id, sequence_id, correct)，question_id/kc 已在每条 exercise 内算好
     rows = []
     for r in records:
         uid = r["user_id"]
@@ -94,22 +74,25 @@ def read_data_from_json(read_file, write_file):
         except (KeyError, TypeError, json.JSONDecodeError):
             continue
         for qid, kc, resp in event_list:
-            rows.append({
-                "user_id": uid,
-                "days_since_signup": days,
-                "exercise_part_index": part,
-                "session_index": sess,
-                "question_id": qid,
-                "sequence_id": kc,
-                "correct": resp,
-            })
+            rows.append(
+                {
+                    "user_id": uid,
+                    "days_since_signup": days,
+                    "exercise_part_index": part,
+                    "session_index": sess,
+                    "question_id": qid,
+                    "sequence_id": kc,
+                    "correct": resp,
+                }
+            )
 
     df = pd.DataFrame(rows)
 
     ins, us, qs, cs, avgins, avgcq, na = sta_infos(df, KEYS, stares)
-    print(f"after filter play_mode=play, interaction num: {ins}, user num: {us}, question num: {qs}, concept num: {cs}, avg(ins) per s: {avgins}, avg(c) per q: {avgcq}, na: {na}")
+    print(
+        f"after filter play_mode=play, interaction num: {ins}, user num: {us}, question num: {qs}, concept num: {cs}, avg(ins) per s: {avgins}, avg(c) per q: {avgcq}, na: {na}"
+    )
 
-    # 2) 按 user_id 分组；3) 按时间排序后直接拼接（question_id / KC 已在每条 exercise 内算好，不在此处再算）
     user_inters = []
     for user, grp in df.groupby("user_id", sort=False):
         tmp = grp.sort_values(by=["days_since_signup", "session_index", "exercise_part_index"])

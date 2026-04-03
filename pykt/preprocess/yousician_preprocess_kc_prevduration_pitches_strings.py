@@ -1,9 +1,7 @@
 import json
 import pandas as pd
 from .utils import sta_infos, write_txt
-
-# KC: pitches
-
+# KC: prev_duration | pitches | strings
 KEYS = ["user_id", "sequence_id"]
 
 # =============================================================================
