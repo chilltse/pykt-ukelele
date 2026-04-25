@@ -34,24 +34,26 @@ def _events_to_event_rows(events_data_str):
     pitches = inner["pitches"]
     strings = inner["strings"]
     reject_reason = inner["reject_reason"]
+
     n = len(pitches)
     assert n == len(duration) == len(strings) == len(reject_reason)
 
     out = []
     for i in range(n):
-        prev_dur = "inf" if i == 0 else str(int(duration[i - 1]))
         pitch_s = sanitize_field(str(pitches[i]), sep="^")
         string_s = sanitize_field(str(strings[i]), sep="^")
 
-        qid = f"{prev_dur}|{pitch_s}|{string_s}"
-
         prev_ps = "inf" if i == 0 else sanitize_field(str(pitches[i - 1]), sep="^")
         prev_ss = "inf" if i == 0 else sanitize_field(str(strings[i - 1]), sep="^")
-        kc = f"{prev_ps}|{prev_ss}|{pitch_s}|{string_s}"
+
+        qid = f"{prev_ps}|{prev_ss}|{pitch_s}|{string_s}"
+        kc = qid
 
         resp = 1 if reject_reason[i] == 0 else 0
         out.append((qid, kc, resp))
+
     return out
+
 
 
 def read_data_from_json(read_file, write_file):
