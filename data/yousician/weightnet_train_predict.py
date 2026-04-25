@@ -13,6 +13,9 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+# python weightnet_train_predict.py train \
+#   --data song_info_fret_strings_map.json \
+#   --output-dir outputs
 
 # -----------------------------
 # 1) Fingering representation
