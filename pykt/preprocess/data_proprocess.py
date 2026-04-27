@@ -4,6 +4,11 @@ def process_raw_data(dataset_name,dname2paths):
     readf = dname2paths[dataset_name]
     dname = "/".join(readf.split("/")[0:-1])
     writef = os.path.join(dname, "data.txt")
+    if dataset_name == "xes3g5m":
+        # Keep outputs in dataset root directory, consistent with other datasets.
+        root_dir = "/".join(readf.split("/")[:-2])
+        dname = root_dir
+        writef = os.path.join(dname, "data.txt")
     print(f"Start preprocessing data: {dataset_name}")
     if dataset_name == "yousician":
         from .yousician_preprocess import read_data_from_json
@@ -27,6 +32,8 @@ def process_raw_data(dataset_name,dname2paths):
         from .slepemapy_preprocess import read_data_from_csv
     elif dataset_name == "assist2017":
         from .assist2017_preprocess import read_data_from_csv
+    elif dataset_name == "xes3g5m":
+        from .xes3g5m_preprocess import read_data_from_csv
     elif dataset_name == "junyi2015":
         from .junyi2015_preprocess import read_data_from_csv, load_q2c
     elif dataset_name in ["ednet","ednet5w"]:

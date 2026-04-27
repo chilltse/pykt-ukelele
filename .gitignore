@@ -6,6 +6,9 @@ examples/pred_wandbs/
 examples/saved_model/
 examples/start_predict.sh
 examples/wandb/
+data/yousician/experiments_report
+data/xes3g5m
+data/eedi
 dist/
 *.egg-info/
 *.pyc

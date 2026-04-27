@@ -16,6 +16,7 @@ dname2paths = {
     "poj": "../data/poj/poj_log.csv",
     "slepemapy": "../data/slepemapy/answer.csv",
     "assist2017": "../data/assist2017/anonymized_full_release_competition_dataset.csv",
+    "xes3g5m": "../data/xes3g5m/question_level/train_valid_sequences_quelevel.csv",
     "junyi2015": "../data/junyi2015/junyi_ProblemLog_original.csv",
     "ednet": "../data/ednet/",
     "ednet5w": "../data/ednet/",
