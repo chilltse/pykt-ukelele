@@ -10,6 +10,7 @@ data/yousician/experiments_report
 data/xes3g5m
 data/eedi
 dist/
+wandb_info_collection/
 *.egg-info/
 *.pyc
 *.pkl
